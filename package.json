@@ -7,7 +7,10 @@
     "dev": "vite --host 0.0.0.0",
     "typecheck": "vue-tsc --noEmit",
     "build": "vite build",
-    "preview": "vite preview --host 0.0.0.0"
+    "preview": "vite preview --host 0.0.0.0",
+    "test:lending": "node --experimental-strip-types --loader ./scripts/alias-loader.mjs scripts/check-lending.ts",
+    "test:solvable": "node --max-old-space-size=2048 --experimental-strip-types --loader ./scripts/alias-loader.mjs scripts/check-solvable.ts",
+    "test": "npm run test:lending && npm run test:solvable"
   },
   "dependencies": {
     "vue": "^3.5.24"

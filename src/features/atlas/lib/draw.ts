@@ -1,5 +1,12 @@
 import { tileCenter } from "./grid";
-import type { Box, Door, FloorPatch, GameDocument, Plate } from "@/shared/types";
+import type {
+  Box,
+  Door,
+  FloorPatch,
+  GameDocument,
+  Plate,
+  Rack,
+} from "@/shared/types";
 
 export const TILE = 46;
 
@@ -11,6 +18,17 @@ const rust = "#b56a32";
 const steel = "#8a93a0";
 const glass = "#7ec8c8";
 const pit = "#0b0907";
+
+const COLOR_INK: Record<string, string> = {
+  timber: rust,
+  iron: steel,
+  glass,
+};
+const COLOR_GLYPH: Record<string, string> = {
+  timber: "木",
+  iron: "铁",
+  glass: "玻",
+};
 
 export function sizeCanvas(
   canvas: HTMLCanvasElement,
@@ -43,9 +61,47 @@ export function paintStage(ctx: CanvasRenderingContext2D, document: GameDocument
   }
   for (const floor of level.floors) paintFloor(ctx, floor, tile);
   for (const plate of level.plates) paintPlate(ctx, plate, tile);
+  for (const rack of level.racks) paintRackReach(ctx, rack, level, tile);
   for (const door of level.doors) paintDoor(ctx, door, tile);
   for (const box of level.boxes) paintBox(ctx, box, tile);
   paintPlayer(ctx, level.player.x, level.player.y, tile, document.attempt.status === "cleared");
+}
+
+function paintRackReach(
+  ctx: CanvasRenderingContext2D,
+  rack: Rack,
+  level: GameDocument["level"],
+  tile: number,
+): void {
+  const box = level.boxes.find((item) => item.id === rack.boxId);
+  if (!box) return;
+  const color = COLOR_INK[rack.color] ?? brass;
+  const start = tileCenter(box.x, box.y, tile);
+  // 只画能实际搭到色门的那段跨距，避免满盘虚线干扰。
+  for (const door of level.doors) {
+    if (door.color !== rack.color) continue;
+    const aligned = box.x === door.x || box.y === door.y;
+    const distance = Math.abs(box.x - door.x) + Math.abs(box.y - door.y);
+    if (!aligned || distance < 1 || distance > rack.reach) continue;
+    const end = tileCenter(door.x, door.y, tile);
+    ctx.save();
+    ctx.strokeStyle = door.open ? moss : color;
+    ctx.globalAlpha = 0.75;
+    ctx.lineWidth = 2;
+    ctx.setLineDash(door.open ? [] : [6, 4]);
+    ctx.beginPath();
+    ctx.moveTo(start.x, start.y);
+    ctx.lineTo(end.x, end.y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+  // 货箱角上的齿条计数标记。
+  const siblings = level.racks.filter((item) => item.boxId === rack.boxId).length;
+  ctx.fillStyle = color;
+  ctx.font = "10px ui-serif, Palatino, serif";
+  ctx.textAlign = "left";
+  ctx.fillText(`齿${siblings > 1 ? `×${siblings}` : ""}`, box.x * tile + 4, box.y * tile + 12);
 }
 
 function paintTile(
@@ -126,12 +182,27 @@ function paintPlate(ctx: CanvasRenderingContext2D, plate: Plate, tile: number): 
 function paintDoor(ctx: CanvasRenderingContext2D, door: Door, tile: number): void {
   const px = door.x * tile;
   const py = door.y * tile;
+  const tint = door.color ? COLOR_INK[door.color] : brass;
   ctx.fillStyle = door.open ? "rgba(201,163,106,0.22)" : "#5b4630";
   ctx.fillRect(px + 14, py + 4, tile - 28, tile - 8);
-  ctx.strokeStyle = brass;
+  ctx.strokeStyle = door.open ? moss : tint;
   ctx.lineWidth = 2;
   ctx.strokeRect(px + 14, py + 4, tile - 28, tile - 8);
-  if (!door.open) {
+  if (door.color) {
+    // 色门：门眼数画成对应数量的点，长门两个点分置两侧暗示对撑。
+    const sockets = door.sockets ?? 1;
+    ctx.fillStyle = door.open ? moss : tint;
+    const cy = py + tile / 2;
+    const spots = sockets === 2 ? [px + tile / 2 - 7, px + tile / 2 + 7] : [px + tile / 2];
+    for (const cx of spots) {
+      ctx.beginPath();
+      ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.font = "10px ui-serif, Palatino, serif";
+    ctx.textAlign = "center";
+    ctx.fillText(COLOR_GLYPH[door.color] ?? "", px + tile / 2, py + 12);
+  } else if (!door.open) {
     ctx.beginPath();
     ctx.arc(px + tile / 2 + 6, py + tile / 2, 3, 0, Math.PI * 2);
     ctx.fillStyle = brass;

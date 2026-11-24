@@ -3,6 +3,7 @@ import { onMounted, onUnmounted } from "vue";
 import { StageView, TileLegend } from "@/features/atlas";
 import { GadgetPanel } from "@/features/gadget";
 import { MoverHud } from "@/features/hauler";
+import { PlanBoard } from "@/features/lending";
 import { StepMeter } from "@/features/ledger";
 import { LevelRail, RecordBoard } from "@/features/voyage";
 import { dirFromKey, shouldCapture } from "./keys";
@@ -15,6 +16,27 @@ const { counts } = shop.hauler;
 const { summary } = shop.gadget;
 const { steps, status, coverage } = shop.ledger;
 const { catalog, completed } = shop.voyage;
+const { lending } = shop;
+const {
+  hasLending,
+  analysis,
+  pinned,
+  inspectedId,
+  inspectedWitness,
+  pinnedDoors,
+  toggleDoor,
+  inspect,
+  pinSelected,
+  unpin,
+} = lending;
+
+function onPin(): void {
+  const result = pinSelected();
+  notice.value = {
+    tone: result.ok ? "success" : "warn",
+    message: result.message,
+  };
+}
 
 function onKey(event: KeyboardEvent): void {
   if (!shouldCapture(event)) return;
@@ -56,6 +78,19 @@ onUnmounted(() => window.removeEventListener("keydown", onKey));
       </main>
       <aside class="side">
         <StepMeter :steps="steps" :status="status" :coverage="coverage" />
+        <PlanBoard
+          v-if="hasLending"
+          :document="document"
+          :analysis="analysis"
+          :pinned="pinned"
+          :inspected-id="inspectedId"
+          :inspected-witness="inspectedWitness"
+          :pinned-doors="pinnedDoors"
+          @toggle="toggleDoor"
+          @inspect="inspect"
+          @pin="onPin"
+          @unpin="unpin"
+        />
         <GadgetPanel :document="document" :summary="summary" />
         <TileLegend />
       </aside>

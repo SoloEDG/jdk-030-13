@@ -21,7 +21,11 @@ export function evaluateGadgets(document: GameDocument): void {
     for (const id of plate.doorIds) doorPower.add(id);
     for (const id of plate.floorIds) floorPower.add(id);
   }
-  for (const door of document.level.doors) door.open = doorPower.has(door.id);
+  // 色门走齿条借调，由 lending 特性域原子重算，踏板不直接供电。
+  for (const door of document.level.doors) {
+    if (door.color) continue;
+    door.open = doorPower.has(door.id);
+  }
   for (const floor of document.level.floors) floor.active = floorPower.has(floor.id);
 }
 

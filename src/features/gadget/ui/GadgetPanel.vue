@@ -8,6 +8,12 @@ defineProps<{ document: GameDocument; summary: string }>();
   <section class="panel gadget" aria-label="地面机关">
     <h2>机关</h2>
     <p class="lede">{{ summary }}</p>
+    <h3 v-if="document.level.racks.length">齿条</h3>
+    <ul v-if="document.level.racks.length">
+      <li v-for="rack in document.level.racks" :key="rack.id">
+        {{ rack.id }} · {{ BOX_LABEL[rack.color] }} · 跨距上限 {{ rack.reach }} 格
+      </li>
+    </ul>
     <h3>踏板</h3>
     <ul>
       <li v-for="plate in document.level.plates" :key="plate.id">
@@ -18,7 +24,11 @@ defineProps<{ document: GameDocument; summary: string }>();
     <h3>门与地板</h3>
     <ul>
       <li v-for="door in document.level.doors" :key="door.id">
-        门 {{ door.open ? "开启" : "关闭" }} · ({{ door.x }},{{ door.y }})
+        门 {{ door.id }}
+        <template v-if="door.color">
+          （{{ BOX_LABEL[door.color] }} · {{ (door.sockets ?? 1) === 2 ? "长门双门眼" : "单门眼" }}）
+        </template>
+        {{ door.open ? "开启" : "关闭" }} · ({{ door.x }},{{ door.y }})
       </li>
       <li v-for="floor in document.level.floors" :key="floor.id">
         {{ floor.morph === "bridge" ? "架桥" : "封道" }}
